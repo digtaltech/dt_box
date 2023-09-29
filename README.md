@@ -1,4 +1,4 @@
-# DT BOX [SAS Edition]
+# DT BOX | SAS Edition
 
 ```
 npm install

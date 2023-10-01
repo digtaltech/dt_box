@@ -2,87 +2,41 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>P2P File Transfer</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DT BOX</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
 </head>
-<link rel="stylesheet" href="style.css">
 
 <body>
-  <h1>DT BOX [SAS Edition]</h1>
-  <input type="text" id="sessionKey" placeholder="Введите ключ сессии">
-  <button id="joinButton">Присоединиться</button>
-  <input type="file" id="fileInput" />
-  <button id="uploadButton" disabled>Загрузить файл</button>
+    <div class="container">
+        <h1>DT BOX [SAS Edition]</h1>
+        <input type="text" id="sessionKey" placeholder="Введите ключ сессии">
+        <button id="joinButton">Присоединиться</button>
+        <input type="file" id="fileInput" />
+        <button id="uploadButton" disabled>Загрузить файл</button>
+    </div>
 
-  <script>
-    const sessionKeyInput = document.getElementById('sessionKey');
-    const joinButton = document.getElementById('joinButton');
-    const fileInput = document.getElementById('fileInput');
-    const uploadButton = document.getElementById('uploadButton');
 
-    let sessionKey = null;
-    let ws = null;
-
-    joinButton.addEventListener('click', () => {
-      sessionKey = sessionKeyInput.value.trim();
-      if (sessionKey) {
-        ws = new WebSocket(`ws://localhost:3000`);
-        ws.onopen = () => {
-          ws.send(JSON.stringify({ type: 'join', sessionKey }));
-          joinButton.disabled = true;
-          uploadButton.disabled = false;
-        };
-
-        ws.onmessage = (event) => {
-          console.log("new message", event.data)
-          // let data = event.data
-          let data = JSON.parse(event.data);
-          // console.log("type message", typeof(data.type))
-
-          if (data.type === 'file') {
-            const { name, type, data: arrayBufferData } = data.payload;
-
-            // Преобразование массива байтов обратно в ArrayBuffer
-            const arrayBuffer = new Uint8Array(arrayBufferData).buffer;
-
-            // Создание Blob
-            const blob = new Blob([arrayBuffer], { type });
-
-            // Создание URL для Blob
-            const url = URL.createObjectURL(blob);
-
-            // Создание элемента <a> для скачивания файла
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = name || 'received-file.txt';
-            a.textContent = `Скачать ${a.download}`;
-
-            // Добавление элемента <a> в DOM
-            document.body.appendChild(a);
-          }
-        };
-
-      }
-    });
-
-    uploadButton.addEventListener('click', () => {
-      const file = fileInput.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const arrayBuffer = e.target.result;
-          console.log('Отправка файла:', arrayBuffer);
-          console.log('Размер буфера:', arrayBuffer.byteLength);
-          const fileName = file.name;
-          const fileType = file.type;
-          ws.send(JSON.stringify({ type: 'file', sessionKey, payload: { name: fileName, type: fileType, data: Array.from(new Uint8Array(arrayBuffer)) } }));
-        };
-        reader.readAsArrayBuffer(file);
-      }
-    });
-
-  </script>
+    <div class="container session-list">
+      
+    </div>
 </body>
 
 </html>
+
+
+<script src="client.js"></script>
+
+<script>
+  
+</script>
+
+
+<!-- <div class="session-element">
+  <img class="file-ico" src="file.svg" alt="">
+  <p class="file-name">tDbsETbYfZ0.jpg</p>
+  <p class="file-status">Загружен</p>
+  <a href="#" download="#" class="btn-download">Скачать</a>
+</div> -->

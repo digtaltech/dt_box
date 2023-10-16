@@ -6,6 +6,7 @@ $(document).ready(function () {
 
   let sessionKey = null;
   let ws = null;
+  let fileChunks = {}; // Переменная для хранения частей файла
 
   $joinButton.on('click', function () {
     sessionKey = $sessionKeyInput.val().trim();
@@ -19,50 +20,76 @@ $(document).ready(function () {
 
       ws.onmessage = function (event) {
         let data = JSON.parse(event.data);
+        
+        console.log("data_ws", data)
 
         if (data.type === 'file') {
-          let { name, type, data: arrayBufferData, type_client } = data.payload;
+          let { name, type, chunk, index, totalChunks, type_client } = data.payload;
 
-          if (type_client == "sender") {
+          console.log("file", data.payload)
+
+          console.log("type_client", type_client)
+
+          if (type_client === "sender") {
             // Отображаем заглушку у отправителя
-            // console.log(name);
-            // Создание элемента <a> для скачивания файла
-
-            
-            let sender_plug = 
-            `<div class="session-element">
-              <img class="file-ico" src="file.svg" alt="">
-              <p class="file-name">${name}</p>
-              <p class="file-status">Загружен</p>
-            </div>`
+            let sender_plug =
+              `<div class="session-element" name="${name}">
+                  <img class="file-ico" src="file.svg" alt="">
+                  <p class="file-name">${name}</p>
+                  <p class="file-status">Загружен</p>
+                </div>`
 
             // Добавление элемента <p> в DOM
             $(".session-list").append(sender_plug);
           } else {
-            // Преобразование массива байтов обратно в ArrayBuffer
-            let arrayBuffer = new Uint8Array(arrayBufferData).buffer;
+            // Преобразование массива байтов обратно в Uint8Array
+            let uint8Array = new Uint8Array(chunk);
 
-            // Создание Blob
-            let blob = new Blob([arrayBuffer], { type });
+            if (index === 0) {
+              // Если это первая часть файла, создаем новый объект Blob
+              fileChunks[name] = [uint8Array];
+              let fileDownloadButton = `<a href="#" download="${name}" class="btn-download">Скачать</a>`;
 
-            // Создание URL для Blob
-            let url = URL.createObjectURL(blob);
+              // Создаем элемент для отображения скачивания файла
+              let receiver_plug =
+                `<div class="session-element" name="${name}">
+                  <img class="file-ico" src="file.svg" alt="">
+                  <p class="file-name">${name}</p>
+                  <p class="file-status">Загружается...</p>
+                  <div class="file-download-links">
+                    ${fileDownloadButton}
+                  </div>
+                </div>`
 
-            // Создание элемента <a> для скачивания файла
+              // Добавление элемента в DOM
+              $(".session-list").append(receiver_plug);
+            } else {
+              // Если это не первая часть файла, добавляем часть в существующий массив
+              if (!fileChunks[name]) {
+                fileChunks[name] = [];
+              }
+              fileChunks[name].push(uint8Array);
+            }
 
-            
-            let sender_plug = 
-            `<div class="session-element">
-              <img class="file-ico" src="file.svg" alt="">
-              <p class="file-name">${name}</p>
-              <a href="${url}" download="${name} class="btn-download">Скачать</a>
-            </div>`
+            if (index === totalChunks - 1) {
+              // Если это последняя часть файла, создаем Blob из всех частей и создаем URL
+              let finalBlob = new Blob(fileChunks[name], { type });
+              let url = URL.createObjectURL(finalBlob);
 
-            // Добавление элемента <a> в DOM
-            $(".session-list").append(sender_plug);
+              // Обновляем ссылку для скачивания в соответствующем элементе
+              $(".session-element[name='img_png.png'] .btn-download").attr("href", url)
+              $(".session-element[name='img_png.png'] .btn-download").attr("download", name)
+
+              $(`.file-name:contains(${name})`).siblings(".file-status").text("Загружен");
+
+              console.log("get all chunks", url)
+              console.log("fileChunks", fileChunks)
+
+            }
           }
         }
       };
+
     }
   });
 
@@ -81,4 +108,10 @@ $(document).ready(function () {
       reader.readAsArrayBuffer(file);
     }
   });
+  
+});
+
+
+$(document).on('click', '.btn-download', function () {
+  console.log('Ссылка для скачивания была нажата.');
 });

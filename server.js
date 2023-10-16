@@ -30,25 +30,42 @@ wss.on('connection', (ws) => {
       sessions[sessionKey] = ws;
       sessionClients[sessionKey].push(ws);
       console.log(`Клиент присоединился к сессии: ${sessionKey}`);
-    } else if (type === 'file') {
+    }
+    else if (type === 'file') {
       if (sessionClients[sessionKey]) {
-        // Преобразование ArrayBuffer в Buffer перед отправкой
-        const arrayBuffer = new Uint8Array(payload.data).buffer;
-
-        // Создаем заглушку для отправителя
-        const placeholderMessage = JSON.stringify({ type: 'file', payload: { name: `${payload.name}`, type: payload.type, type_client: "sender" } });
-        ws.send(placeholderMessage);
-
-        // Отправляем файл всем остальным клиентам в данной сессии
-        sessionClients[sessionKey].forEach((client) => {
-          // Проверяем, чтобы не отправлять файл обратно отправителю
-          if (client !== ws) {
-            const fileMessage = JSON.stringify({ type: 'file', payload: { name: payload.name, type: payload.type, data: Array.from(new Uint8Array(arrayBuffer)) } });
-            client.send(fileMessage);
-          }
+        const fileChunks = [];
+        const chunkSize = 64 * 1024; // Размер части (64 КБ)
+  
+        for (let i = 0; i < payload.data.length; i += chunkSize) {
+          const chunk = payload.data.slice(i, i + chunkSize);
+          fileChunks.push(chunk);
+        }
+  
+        const fileName = payload.name;
+        const fileType = payload.type;
+  
+        // Проходимся по частям файла и отправляем их клиентам
+        fileChunks.forEach((chunk, index) => {
+          sessionClients[sessionKey].forEach((client) => {
+            // Проверяем, чтобы не отправлять часть файла обратно отправителю
+            if (client !== ws) {
+              const fileChunkMessage = JSON.stringify({
+                type: 'file',
+                payload: {
+                  name: fileName,
+                  type: fileType,
+                  chunk: Array.from(new Uint8Array(chunk)),
+                  index: index,
+                  totalChunks: fileChunks.length,
+                  type_client: "receiver"
+                }
+              });
+              client.send(fileChunkMessage);
+            }
+          });
         });
-
-        console.log(`Файл передан в сессию: ${sessionKey}`);
+  
+        console.log(`Файл передан в сессию частями: ${sessionKey}`);
       }
     }
 
